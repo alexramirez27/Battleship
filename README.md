@@ -1,1 +1,2 @@
-Webpack template for future repositories.
+# Battleship
+Project Assignment of the JavaScript course from The Odin Project.
