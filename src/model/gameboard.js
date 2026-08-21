@@ -3,6 +3,7 @@ import Ship from "./ship.js";
 export default class Gameboard {
     #board = [];
     #shipPositions = new Map();
+    #attacks = new Set();
     #missedAttacks = new Set();
     #allShipsSunk = false;
 
@@ -13,25 +14,27 @@ export default class Gameboard {
     #carrier = new Ship(5);
 
     constructor() {
-        for (let row = 0; row < 10; row++) {
-            let currRow = [];
-            for (let col = 0; col < 10; col++) {
-                currRow.push('W');
-            }
-            this.#board.push(currRow);
-        }
+        this.resetBoard();
     }
 
     get allShipsSunk() {
         return this.#allShipsSunk;
     }
 
-    receiveAttack(row, col) {
-
+    get shipPositions() {
+        return this.#shipPositions;
     }
 
-    placeShip(shipType, orientation, direction, startRow, startCol) {
-        if (typeof shipType === "string" || shipType instanceof String) { 
+    get missedAttacks() {
+        return this.#missedAttacks;
+    }
+
+    get board() {
+        return this.#board;
+    }
+
+    numTimesShipHit(shipType) {
+        if (!(typeof shipType === "string" || shipType instanceof String)) { 
             throw new TypeError("shipType needs to be a string!");
         }
 
@@ -41,41 +44,116 @@ export default class Gameboard {
                 throw new Error("shipType needs to be a destroyer, submarine, cruiser, battleship, or carrier!");
         }
 
-        if (orientation !== "horizontal" && orientation !== "vertical") {
+        switch (shipTypeLC) {
+            case "destroyer":
+                return this.#destroyer.numTimesHit;
+            case "submarine":
+                return this.#submarine.numTimesHit;
+            case "cruiser":
+                return this.#cruiser.numTimesHit;
+            case "battleship":
+                return this.#battleship.numTimesHit;
+            case "carrier":
+                return this.#carrier.numTimesHit;
+        }
+    }
+
+    receiveAttack(row, col) {
+        if (this.#allShipsSunk || this.#attacks.has(`(${row}, ${col})`)) {
+            return false;
+        }
+
+        if (this.#shipPositions.has(`(${row}, ${col})`)) {
+            const shipType = this.#shipPositions.get(`(${row}, ${col})`);
+
+            switch (shipType) {
+                case 'destroyer':
+                    this.#destroyer.hit();
+                    break;
+                case 'submarine':
+                    this.#submarine.hit();
+                    break;
+                case 'cruiser':
+                    this.#cruiser.hit();
+                    break;
+                case 'battleship':
+                    this.#battleship.hit();
+                    break;
+                case 'carrier':
+                    this.#carrier.hit();
+                    break;
+            }
+        }
+        
+        this.#attacks.add(`(${row}, ${col})`);
+        this.#missedAttacks.add(`(${row}, ${col})`);
+
+        if (this.#destroyer.beenSunk &&
+            this.#submarine.beenSunk &&
+            this.#cruiser.beenSunk &&
+            this.#battleship.beenSunk &&
+            this.#carrier.beenSunk
+        ) {
+            this.#allShipsSunk = true;
+        }
+
+        return true;
+    }
+
+    placeShip(shipType, orientation, direction, startRow, startCol) {
+        if (!(typeof shipType === "string" || shipType instanceof String)) { 
+            throw new TypeError("shipType needs to be a string!");
+        }
+
+        const shipTypeLC = shipType.toLowerCase();
+        const orientationLC = orientation.toLowerCase();
+        const directionLC = direction.toLowerCase();
+        if (shipTypeLC !== "destroyer" && shipTypeLC !== "submarine" && shipTypeLC !== "cruiser" &&
+            shipTypeLC !== "battleship" && shipTypeLC !== "carrier") {
+                throw new Error("shipType needs to be a destroyer, submarine, cruiser, battleship, or carrier!");
+        }
+
+        if (orientationLC !== "horizontal" && orientationLC !== "vertical") {
             throw new Error("Orientation must be horizontal or vertical!")
         }
 
-        if (direction !== "up" && direction !== "down" && direction !== "left" && direction !== "right") {
+        if (directionLC !== "up" && directionLC !== "down" && directionLC !== "left" && directionLC !== "right") {
             throw new Error("Direction must be up, down, left, or right!");
         }
 
-        if (((direction === "left" || direction === "right") && orientation === "vertical") ||
-            ((direction === "up" || direction === "down") && orientation === "horizontal")) {
+        if (((directionLC === "left" || directionLC === "right") && orientationLC === "vertical") ||
+            ((directionLC === "up" || directionLC === "down") && orientationLC === "horizontal")) {
             throw new Error("The orientation and direction entered are not compatible!");
         }
 
         let shipLength;
+        let shipSymbol;
         switch (shipTypeLC) {
             case "destroyer":
                 shipLength = 2;
+                shipSymbol = 'DE';
                 break;
             case "submarine":
                 shipLength = 3;
+                shipSymbol = 'SU';
                 break;
             case "cruiser":
                 shipLength = 3;
+                shipSymbol = 'CR';
                 break;
             case "battleship":
                 shipLength = 4;
+                shipSymbol = 'BA';
                 break;
             case "carrier":
                 shipLength = 5;
+                shipSymbol = 'CA';
                 break;
         }
 
         const proposedShipPositions = [];
         switch (direction) {
-            case "up":
+            case "up": {
                 // Board bounds check
                 const endRow = startRow - (shipLength - 1);
                 if (endRow < 0) {
@@ -87,7 +165,8 @@ export default class Gameboard {
                 }
 
                 break;
-            case "down":
+            }
+            case "down": {
                 // Board bounds check
                 const endRow = startRow + (shipLength - 1);
                 if (endRow > 9) {
@@ -99,7 +178,8 @@ export default class Gameboard {
                 }
 
                 break;
-            case "left":
+            }
+            case "left": {
                 // Board bounds check
                 const endCol = startCol - (shipLength - 1);
                 if (endCol < 0) {
@@ -111,10 +191,11 @@ export default class Gameboard {
                 }
 
                 break;
-            case "right":
+            }
+            case "right": {
                 // Board bounds check
                 const endCol = startCol + (shipLength - 1);
-                if (endCol > 0) {
+                if (endCol > 9) {
                     return false;
                 }
 
@@ -123,6 +204,7 @@ export default class Gameboard {
                 }
 
                 break;
+            }
         }
 
         // Check if one of the squares is currently occupied by a ship
@@ -134,10 +216,77 @@ export default class Gameboard {
 
         // Place the ship on the gameboard
         for (const [row, col] of proposedShipPositions) {
-            this.#board[row][col] = 'S';
+            this.#board[row][col] = shipSymbol;
             this.#shipPositions.set(`(${row}, ${col})`, shipTypeLC);
         }
 
         return true;
+    }
+
+    randomlyPlaceShips() {
+        let [orientation, direction, startRow, startCol] = this.#randomOrDirPos();
+
+        while (!this.placeShip("destroyer", orientation, direction, startRow, startCol)) {
+            [orientation, direction, startRow, startCol] = this.#randomOrDirPos();
+        }
+
+        while (!this.placeShip("submarine", orientation, direction, startRow, startCol)) {
+            [orientation, direction, startRow, startCol] = this.#randomOrDirPos();
+        }
+
+        while (!this.placeShip("cruiser", orientation, direction, startRow, startCol)) {
+            [orientation, direction, startRow, startCol] = this.#randomOrDirPos();
+        }
+
+        while (!this.placeShip("battleship", orientation, direction, startRow, startCol)) {
+            [orientation, direction, startRow, startCol] = this.#randomOrDirPos();
+        }
+
+        while (!this.placeShip("carrier", orientation, direction, startRow, startCol)) {
+            [orientation, direction, startRow, startCol] = this.#randomOrDirPos();
+        }
+    }
+
+    resetBoard() {
+        for (let row = 0; row < 10; row++) {
+            let currRow = [];
+            for (let col = 0; col < 10; col++) {
+                currRow.push('WA');
+            }
+            this.#board.push(currRow);
+        }
+    }
+
+    prettyPrint() {
+        for (const row of this.#board) {
+            console.log(row.join('  '));
+        }
+    }
+
+    printMap() {
+        console.log(this.#shipPositions);
+
+        // for (const [key, value] of this.#shipPositions) {
+        //     console.log(key, value);
+        // }
+    }
+
+    #randomOrDirPos() {
+        let orientation = Math.random() < 0.5 ? "horizontal" : "vertical";
+        
+        let direction;
+        switch (orientation) {
+            case "horizontal": 
+                direction = Math.random() < 0.5 ? "left" : "right";
+                break;
+            case "vertical":
+                direction = Math.random() < 0.5 ? "up" : "down";
+                break;
+        }
+
+        const startRow = Math.floor(Math.random() * 10);
+        const startCol = Math.floor(Math.random() * 10);
+
+        return [orientation, direction, startRow, startCol];
     }
 }

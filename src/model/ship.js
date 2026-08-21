@@ -1,7 +1,7 @@
 export default class Ship {
     #length;
     #shipType;
-    #numTimesHit = 0;
+    #numTimesHit = 0;           
     #beenSunk = false;
 
     constructor(length, submarine = false) {
@@ -41,6 +41,10 @@ export default class Ship {
 
     get beenSunk() {
         return this.#beenSunk;
+    }
+
+    get numTimesHit() {
+        return this.#numTimesHit;
     }
 
     hit() {
