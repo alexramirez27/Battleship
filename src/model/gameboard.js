@@ -3,7 +3,7 @@ import Ship from "./ship.js";
 export default class Gameboard {
     #board = [];
     #shipPositions = new Map();
-    #attacks = new Set();
+    #successfulAttacks = new Set();
     #missedAttacks = new Set();
     #allShipsSunk = false;
 
@@ -14,7 +14,8 @@ export default class Gameboard {
     #carrier = new Ship(5);
 
     constructor() {
-        this.resetBoard();
+        this.#resetBoard();
+        this.#randomlyPlaceShips();
     }
 
     get allShipsSunk() {
@@ -58,12 +59,15 @@ export default class Gameboard {
         }
     }
 
+    // Returns false if the position has already been attacked
     receiveAttack(row, col) {
-        if (this.#allShipsSunk || this.#attacks.has(`(${row}, ${col})`)) {
+        if (this.#allShipsSunk || this.#successfulAttacks.has(`(${row}, ${col})`)) {
             return false;
         }
 
+        let hit = false;
         if (this.#shipPositions.has(`(${row}, ${col})`)) {
+            hit = true;
             const shipType = this.#shipPositions.get(`(${row}, ${col})`);
 
             switch (shipType) {
@@ -84,9 +88,14 @@ export default class Gameboard {
                     break;
             }
         }
-        
-        this.#attacks.add(`(${row}, ${col})`);
-        this.#missedAttacks.add(`(${row}, ${col})`);
+
+        if (hit) {
+            this.#successfulAttacks.add(`(${row}, ${col})`);
+            this.#board[row][col] = 'OO';
+        } else {
+            this.#missedAttacks.add(`(${row}, ${col})`);
+            this.#board[row][col] = 'XX';
+        }
 
         if (this.#destroyer.beenSunk &&
             this.#submarine.beenSunk &&
@@ -223,7 +232,27 @@ export default class Gameboard {
         return true;
     }
 
-    randomlyPlaceShips() {
+    prettyPrint() {
+        for (const row of this.#board) {
+            console.log(row.join('  '));
+        }
+    }
+
+    printMap() {
+        console.log(this.#shipPositions);
+    }  
+
+    #resetBoard() {
+        for (let row = 0; row < 10; row++) {
+            let currRow = [];
+            for (let col = 0; col < 10; col++) {
+                currRow.push('WA');
+            }
+            this.#board.push(currRow);
+        }
+    }
+
+    #randomlyPlaceShips() {
         let [orientation, direction, startRow, startCol] = this.#randomOrDirPos();
 
         while (!this.placeShip("destroyer", orientation, direction, startRow, startCol)) {
@@ -245,30 +274,6 @@ export default class Gameboard {
         while (!this.placeShip("carrier", orientation, direction, startRow, startCol)) {
             [orientation, direction, startRow, startCol] = this.#randomOrDirPos();
         }
-    }
-
-    resetBoard() {
-        for (let row = 0; row < 10; row++) {
-            let currRow = [];
-            for (let col = 0; col < 10; col++) {
-                currRow.push('WA');
-            }
-            this.#board.push(currRow);
-        }
-    }
-
-    prettyPrint() {
-        for (const row of this.#board) {
-            console.log(row.join('  '));
-        }
-    }
-
-    printMap() {
-        console.log(this.#shipPositions);
-
-        // for (const [key, value] of this.#shipPositions) {
-        //     console.log(key, value);
-        // }
     }
 
     #randomOrDirPos() {

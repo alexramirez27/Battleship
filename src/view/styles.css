@@ -1,4 +1,157 @@
 /* styles.css */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Science+Gothic:wght@100..900&display=swap');
+
+:root {
+  --blue-background: #3F6AA2;
+  --blue-hover: #214370;
+  --blue-active: #3875c5;
+  --red-background: #A23F3F;
+  --red-hover: #6B1E1E;
+  --red-active: #ca4444;
+  --red-text: #FF5858;
+  --blue-text: #052B5A;
+  --water: #3B93FF;
+  --ship: #3E4256;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
-  background-color: rebeccapurple;
+  background-color: white;
+  margin: 0;
+  font-family: "Roboto", sans-serif;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 100vh;
+}
+
+header {
+  background-color: black;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#audio {
+  /* outline: 1px solid orange; */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+svg {
+  cursor: pointer;
+}
+
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#menu-btns {
+  display: flex;
+  gap: 160px;
+}
+
+#menu-btns button {
+  font-size: 2.25rem;
+  font-weight: 700;
+  width: 393px;
+  height: 175px;
+  border-radius: 24px;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+#menu-btns button:nth-child(1) {
+  background-color: var(--blue-background, blue);
+}
+
+#menu-btns button:nth-child(1):hover {
+  background-color: var(--blue-hover, blue);
+}
+
+#menu-btns button:nth-child(1):active {
+  background-color: var(--blue-active, blue);
+}
+
+#menu-btns button:nth-child(2) {
+  background-color: var(--red-background, red);
+}
+
+#menu-btns button:nth-child(2):hover {
+  background-color: var(--red-hover, red);
+}
+
+#menu-btns button:nth-child(2):active {
+  background-color: var(--red-active, red);
+}
+
+.gameboards {
+  width: 480px;
+  height: 480px;
+  outline: 1px solid black;
+  display: grid;
+  grid-auto-rows: 1fr;
+}
+
+/* #test-board {
+  width: 480px;
+  height: 480px;
+  outline: 2px solid black;
+  display: grid;
+  grid-auto-rows: 1fr;
+} */
+
+.board-row {
+  outline: 1px solid black;
+  display: flex;
+}
+
+.cell {
+  outline: 1px solid black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+footer {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  justify-items: center;
+  background-color: black;
+  color: white;
+  gap: 4px;
+  padding: 28px 0;
+  box-shadow: 0 -2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+footer > * {
+  margin: 0;
+  display: flex;
+  gap: 24px;
+}   
+
+footer p {
+  align-items: flex-end;
+  font-size: 1.1rem;
+}
+
+footer svg {
+  color: white;
 }
