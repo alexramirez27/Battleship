@@ -7,15 +7,14 @@ export default class Gameboard {
     #missedAttacks = new Set();
     #allShipsSunk = false;
 
-    #destroyer = new Ship(2);
-    #submarine = new Ship(3, true);
-    #cruiser = new Ship(3);
-    #battleship = new Ship(4);
-    #carrier = new Ship(5);
+    #destroyer;
+    #submarine;
+    #cruiser;
+    #battleship;
+    #carrier;
 
     constructor() {
-        this.#resetBoard();
-        this.#randomlyPlaceShips();
+        this.resetBoard();
     }
 
     get allShipsSunk() {
@@ -242,7 +241,18 @@ export default class Gameboard {
         console.log(this.#shipPositions);
     }  
 
-    #resetBoard() {
+    resetBoard() {
+        this.#board.length = 0;
+        this.#shipPositions.clear();
+        this.#successfulAttacks.clear();
+        this.#missedAttacks.clear();
+
+        this.#destroyer = new Ship(2);
+        this.#submarine = new Ship(3, true);
+        this.#cruiser = new Ship(3);
+        this.#battleship = new Ship(4);
+        this.#carrier = new Ship(5);
+
         for (let row = 0; row < 10; row++) {
             let currRow = [];
             for (let col = 0; col < 10; col++) {
@@ -250,6 +260,8 @@ export default class Gameboard {
             }
             this.#board.push(currRow);
         }
+
+        this.#randomlyPlaceShips();
     }
 
     #randomlyPlaceShips() {
