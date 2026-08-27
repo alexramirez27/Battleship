@@ -197,7 +197,7 @@ button {
   align-items: center;
   font-size: 2rem;
   font-weight: 400;
-  cursor: pointer;
+  /* cursor: pointer; */
   height: 48px;
   width: 48px;
 }
