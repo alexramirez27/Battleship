@@ -45,13 +45,23 @@ export default class View {
         dialog.close();
     }
 
+    // TODO
+    homePage() {
+        
+    }
+
     boardSetupPage(player) {
         const main = document.querySelector('main');
         main.style.backgroundColor = player.playerColor === "blue"
             ? "var(--blue-background, blue)"
             : "var(--red-background, blue)";
 
-        const setupContainer = document.createElement('div');
+        let setupContainer = document.querySelector('#setup-container');
+        if (setupContainer && main.contains(setupContainer)) {
+            main.removeChild(setupContainer);
+        }
+
+        setupContainer = document.createElement('div');
         setupContainer.id = "setup-container";
         
         this.displayBoard(setupContainer, player, "player");
@@ -80,11 +90,15 @@ export default class View {
             ? "var(--blue-background, blue)"
             : "var(--red-background, blue)";
 
-        const boardsContainer = document.createElement('div');
+        let boardsContainer = document.querySelector('#boards-container');
+        if (boardsContainer && main.contains(boardsContainer)) {
+            main.removeChild(boardsContainer);
+        }
+
+        boardsContainer = document.createElement('div');
         boardsContainer.id = "boards-container";
 
         this.displayBoard(boardsContainer, player, "player");
-    
         this.displayBoard(boardsContainer, opponent, "opponent");
 
         main.appendChild(boardsContainer);
@@ -102,8 +116,10 @@ export default class View {
         
         // Player's gameboard
         const playerBoard = player.gameboard.board;
-        player.gameboard.prettyPrint();
-        console.log('============================');
+        // player.gameboard.prettyPrint();
+        // player.gameboard.printMap();
+
+        // console.log('======================================');
 
         const playerBoardDiv = document.createElement('div');
         playerBoardDiv.className = "gameboard";
@@ -224,7 +240,7 @@ export default class View {
             for (let col = 0; col < 10; col++) {
                 const cellDiv = document.createElement('div');
                 cellDiv.className = "cell";
-                cellDiv.id = `opp-${this.#map.get(row)}${col}`;
+                cellDiv.id = `opp-${this.#map.get(row)}${col + 1}`;
 
                 switch(opponentBoard[row][col]) {
                     case 'WA':
