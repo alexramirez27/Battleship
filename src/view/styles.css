@@ -58,12 +58,12 @@ main {
   display: flex;
   justify-content: center;
   align-items: center;
-  /* padding: 64px 0; */
+  flex-direction: column;
 }
 
 #menu-btns {
   display: flex;
-  gap: 160px;
+  gap: 200px;
   /* outline: 1px solid orange; */
 }
 
@@ -146,7 +146,7 @@ button {
   /* outline: 1px solid orange; */
   display: grid;
   grid-auto-rows: 1fr;
-  padding: 0 48px 96px 0;
+  padding: 0 48px 48px 0;
 }
 
 .player-header {
@@ -202,9 +202,21 @@ button {
   width: 48px;
 }
 
-#countdown {
+.text-second-line {
   display: inline-block;
   margin-top: 8px;
+}
+
+#ship-descriptors {
+  display: flex;
+  /* justify-content: space-between; */
+  gap: 48px;
+  /* outline: 1px solid orange; */
+}
+
+#ship-descriptors > h1 {
+  font-weight: 500;
+  /* outline: 1px solid purple; */
 }
 
 dialog {

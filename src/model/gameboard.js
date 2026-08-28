@@ -25,6 +25,10 @@ export default class Gameboard {
         return this.#shipPositions;
     }
 
+    get successfulAttacks() {
+        return this.#successfulAttacks;
+    }
+
     get missedAttacks() {
         return this.#missedAttacks;
     }

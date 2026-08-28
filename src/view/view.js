@@ -23,16 +23,16 @@ export default class View {
 
         const twoPlayerBtn = document.querySelector('#menu-btns button:nth-child(1)');
         const computerBtn = document.querySelector('#menu-btns button:nth-child(2)');
+    }
 
-        twoPlayerBtn.addEventListener("click", () => {
-            twoPlayerBtn.style.display = "none";
-            computerBtn.style.display = "none";
-        });
-
-        computerBtn.addEventListener("click", () => {
-            twoPlayerBtn.style.display = "none";
-            computerBtn.style.display = "none";
-        });
+    removeFromDOM(parent, ...children) { 
+        if (parent) { 
+            children.forEach(child => { 
+                if (child && parent.contains(child)) { 
+                    parent.removeChild(child); 
+                } 
+            }); 
+        } 
     }
 
     openModal(dialogId) {
@@ -44,10 +44,49 @@ export default class View {
         const dialog = document.querySelector(`#${dialogId}`);
         dialog.close();
     }
+    
+    shipDescriptors() {
+        const main = document.querySelector('main');
 
-    // TODO
+        const shipDescriptors = document.createElement('div');
+        shipDescriptors.id = "ship-descriptors";
+
+        const destroyer = document.createElement('h1');
+        destroyer.textContent = 'DE: Destroyer';
+
+        const submarine = document.createElement('h1');
+        submarine.textContent = 'SU: Submarine';
+
+        const cruiser = document.createElement('h1');
+        cruiser.textContent = 'CR: Cruiser';
+
+        const battleship = document.createElement('h1');
+        battleship.textContent = 'BA: Battleship';
+
+        const carrier = document.createElement('h1');
+        carrier.textContent = 'CA: Carrier';
+
+        shipDescriptors.append(destroyer, submarine, cruiser, battleship, carrier);
+
+        main.appendChild(shipDescriptors);
+    }
+
     homePage() {
-        
+        const main = document.querySelector('main');
+        main.style.backgroundColor = "white";
+
+        const menuBtns = document.createElement('div');
+        menuBtns.id = "menu-btns";
+
+        const twoPlayerBtn = document.createElement('button');
+        twoPlayerBtn.append("2-Player Mode", document.createElement("br"), "(Local)");
+        menuBtns.appendChild(twoPlayerBtn);
+
+        const computerBtn = document.createElement('button');
+        computerBtn.append("Play", document.createElement('br'), "Computer");
+        menuBtns.appendChild(computerBtn);
+
+        main.appendChild(menuBtns);
     }
 
     boardSetupPage(player) {
@@ -81,7 +120,9 @@ export default class View {
         
         setupContainer.appendChild(buttonsContainer);
 
-        main.appendChild(setupContainer);
+        const shipDescriptors = document.querySelector('#ship-descriptors');
+
+        main.insertBefore(setupContainer, shipDescriptors);
     }
 
     gameViewPage(player, opponent) {
@@ -101,7 +142,9 @@ export default class View {
         this.displayBoard(boardsContainer, player, "player");
         this.displayBoard(boardsContainer, opponent, "opponent");
 
-        main.appendChild(boardsContainer);
+        const shipDescriptors = document.querySelector('#ship-descriptors');
+
+        main.insertBefore(boardsContainer, shipDescriptors);
     }
 
     displayBoard(boardsContainer, player, playerType) {

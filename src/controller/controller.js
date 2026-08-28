@@ -3,11 +3,11 @@ import Player from "../model/player.js";
 
 export default class Controller {
     #view = new View();
-    #gameType;
-    #player1;
-    #player2;
-    #currentPlayer;
-    #currentOpponent;
+    #gameType = "";
+    #player1 = null;
+    #player2 = null;
+    #currentPlayer = null;
+    #currentOpponent = null;
     #currentPage = "home";
     #turn = 1;
     #map = new Map([
@@ -66,21 +66,51 @@ export default class Controller {
         this.#homePageListeners();
     }
 
+    #resetGame() {
+        this.#gameType = "";
+        this.#player1 = null;
+        this.#player2 = null;
+        this.#currentPlayer = null;
+        this.#currentOpponent = null;
+        this.#currentPage = "home";
+        this.#turn = 1;
+        // this.#homePageListeners();
+
+        const firstDialogHeader = document.querySelector('#next-player-turn > h1');
+        firstDialogHeader.textContent = "";
+
+        const spanPlayerNum = document.createElement('span');
+        spanPlayerNum.id = "curr-player-num";
+        const spanSecondLine = document.createElement('span');
+        spanSecondLine.className = "text-second-line";
+        firstDialogHeader.append("Player", spanPlayerNum, "'s turn in", document.createElement('br'), spanSecondLine);
+
+        const secondDialogHeader = document.querySelector('#winner > h1');
+        secondDialogHeader.textContent = "";
+    }
+
     #homePageListeners() {
+        const main = document.querySelector('main');
+        const menuBtns = main.querySelector('#menu-btns');
+        const twoPlayerBtn = menuBtns.querySelector('button:nth-child(1)');
+        const computerBtn = menuBtns.querySelector('button:nth-child(2)');
+
         // 2-player mode
-        const twoPlayerBtn = document.querySelector('#menu-btns button:nth-child(1)');
         twoPlayerBtn.addEventListener('click', () => {
+            this.#view.removeFromDOM(main, menuBtns);
             this.#currentPage = "setup";
             this.gameType = "2-player";
             this.#view.boardSetupPage(this.#currentPlayer, this.#currentOpponent);
             this.#setupPageListeners();
+            this.#view.shipDescriptors();
         });
 
         // Computer mode
-        const computerBtn = document.querySelector('#menu-btns button:nth-child(2)');
         computerBtn.addEventListener('click', () => {
+            this.#view.removeFromDOM(main, menuBtns);
             this.#currentPage = "setup";
             this.gameType = "computer";
+            this.#view.shipDescriptors();
         });
     }
 
@@ -92,8 +122,8 @@ export default class Controller {
         const randomBtn = document.querySelector('#random-btn');
         randomBtn.addEventListener("click", () => {
             const gameboard = document.querySelector('.gameboard');
-            setupContainer.removeChild(gameboard);
-            setupContainer.removeChild(buttonsContainer);
+
+            this.#view.removeFromDOM(setupContainer, gameboard, buttonsContainer);
 
             this.#currentPlayer.gameboard.resetBoard();
             
@@ -103,8 +133,6 @@ export default class Controller {
 
         const acceptBtn = document.querySelector('#accept-btn');
         acceptBtn.addEventListener("click", () => {
-            // this.#turn++;
-
             if (this.#turn % 2 === 1) {
                 this.#currentPlayer = this.#player2;
                 this.#currentOpponent = this.#player1;
@@ -117,7 +145,7 @@ export default class Controller {
 
             // Player 2 is a real player
             if (this.#currentPlayer.playerType === "real") {
-                main.removeChild(setupContainer);
+                this.#view.removeFromDOM(main, setupContainer)
                 if (this.#turn > 2) {
                     this.#currentPage = "game-page";
                 }
@@ -142,6 +170,15 @@ export default class Controller {
                 const posConverted = this.#map.get(pos);
                 const [row, col] = posConverted.split('');
                 // console.log(`row = ${row}, col = ${col}`);
+
+                // Do not execute if the cell has already been attacked
+                if (
+                    this.#currentOpponent.gameboard.successfulAttacks.has(`(${row}, ${col})`) ||
+                    this.#currentOpponent.gameboard.missedAttacks.has(`(${row}, ${col})`)
+                ) {
+                    return;
+                }
+
                 this.#currentOpponent.gameboard.receiveAttack(row, col);
 
                 // console.log(`current turn = ${this.#turn}`);
@@ -152,11 +189,25 @@ export default class Controller {
 
                 // Remove current gameboards from the DOM
                 const boardsContainer = main.querySelector('#boards-container');
-                main.removeChild(boardsContainer);
+                this.#view.removeFromDOM(main, boardsContainer);
 
                 // Check if all ships sunk
                 if (this.#currentOpponent.gameboard.allShipsSunk) {
                     console.log('All of the opponents ships have been sunk!');
+                    if (this.#turn % 2 === 1) {
+                        // console.log('Player 1 wins!');
+                        this.#playerWinsModal("Player 1");
+                    } else {
+                        // console.log('Player 2 wins!');
+                        if (this.#currentOpponent.playerType === "real") {
+                            this.#playerWinsModal("Player 2");
+                        } else if (this.#currentOpponent.playerType === "computer") {
+                            this.#playerWinsModal("Computer");
+                        }
+                    }
+
+                    // this.#playerWinsModal();
+                    return;
                 }
 
                 if (this.#turn % 2 === 1) {
@@ -174,6 +225,21 @@ export default class Controller {
         })
     }
 
+    async #playerWinsModal(playerWinner) {
+        const winner = document.querySelector('#winner > h1');
+        // winner.textContent = ` playerWinner`;
+        const secondLine = document.createElement('span');
+        secondLine.className = 'text-second-line';
+        secondLine.textContent = "wins!";
+        winner.append(playerWinner, document.createElement('br'), secondLine);
+
+        await this.#transitionModal('winner');
+
+        this.#view.homePage();
+        this.#homePageListeners();
+        this.#resetGame();
+    }
+
     async #nextPlayerModal() {
         await this.#transitionModal('next-player-turn');
 
@@ -188,20 +254,29 @@ export default class Controller {
 
     async #transitionModal(dialogId) {
         const currPlayerNum = document.querySelector('#curr-player-num');
-        currPlayerNum.textContent = this.#turn % 2 === 1 ? 1 : 2;
+        currPlayerNum.textContent = this.#turn % 2 === 1 ? " 1" : " 2";
 
-        const countdown = document.querySelector('#countdown');
-        countdown.textContent = '3';
+        let secondLine = document.querySelector('.text-second-line');
+
+        const shipDescriptors = document.querySelector('#ship-descriptors');
+        shipDescriptors.style.visibility = "hidden";
 
         this.#view.openModal(dialogId);
 
-        await this.#delay(1000);
-        countdown.textContent = '2';
-        await this.#delay(1000);
-        countdown.textContent = '1';
-        await this.#delay(1000);
+        if (dialogId === 'next-player-turn') {
+            secondLine.textContent = '3';
+            await this.#delay(100);
+            secondLine.textContent = '2';
+            await this.#delay(100);
+            secondLine.textContent = '1';
+            await this.#delay(100);
+        } else if (dialogId === 'winner') {
+            await this.#delay(3000);
+        }
 
         this.#view.closeModal(dialogId);
+
+        shipDescriptors.style.visibility = "visible";
     }
 
     #delay(ms) {
