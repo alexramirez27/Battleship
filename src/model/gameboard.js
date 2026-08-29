@@ -13,6 +13,10 @@ export default class Gameboard {
     #battleship;
     #carrier;
 
+    #recentHit;
+    #sunkAShip = false;
+    #mostRecentShipSunk;
+
     constructor() {
         this.resetBoard();
     }
@@ -35,6 +39,18 @@ export default class Gameboard {
 
     get board() {
         return this.#board;
+    }
+
+    get recentHit() {
+        return this.#recentHit;
+    }
+
+    get sunkAShip() {
+        return this.#sunkAShip;
+    }
+
+    get mostRecentShipSunk() {
+        return this.#mostRecentShipSunk;
     }
 
     numTimesShipHit(shipType) {
@@ -64,6 +80,8 @@ export default class Gameboard {
 
     // Returns false if the position has already been attacked
     receiveAttack(row, col) {
+        this.#sunkAShip = false;
+
         if (this.#allShipsSunk || this.#successfulAttacks.has(`(${row}, ${col})`)) {
             return false;
         }
@@ -76,18 +94,38 @@ export default class Gameboard {
             switch (shipType) {
                 case 'destroyer':
                     this.#destroyer.hit();
+                    if (this.#destroyer.beenSunk) {
+                        this.#sunkAShip = true;
+                        this.#mostRecentShipSunk = "Destroyer";
+                    }
                     break;
                 case 'submarine':
                     this.#submarine.hit();
+                    if (this.#submarine.beenSunk) {
+                        this.#sunkAShip = true;
+                        this.#mostRecentShipSunk = "Submarine";
+                    }
                     break;
                 case 'cruiser':
                     this.#cruiser.hit();
+                    if (this.#cruiser.beenSunk) {
+                        this.#sunkAShip = true;
+                        this.#mostRecentShipSunk = "Cruiser";
+                    }
                     break;
                 case 'battleship':
                     this.#battleship.hit();
+                    if (this.#battleship.beenSunk) {
+                        this.#sunkAShip = true;
+                        this.#mostRecentShipSunk = "Battleship";
+                    }
                     break;
                 case 'carrier':
                     this.#carrier.hit();
+                    if (this.#carrier.beenSunk) {
+                        this.#sunkAShip = true;
+                        this.#mostRecentShipSunk = "Carrier";
+                    }
                     break;
             }
         }
@@ -95,9 +133,11 @@ export default class Gameboard {
         if (hit) {
             this.#successfulAttacks.add(`(${row}, ${col})`);
             this.#board[row][col] = 'OO';
+            this.#recentHit = "hit";
         } else {
             this.#missedAttacks.add(`(${row}, ${col})`);
             this.#board[row][col] = 'XX';
+            this.#recentHit = "miss";
         }
 
         if (this.#destroyer.beenSunk &&

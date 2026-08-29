@@ -4,6 +4,7 @@ export default class Player {
     #gameboard = new Gameboard();
     #playerType;
     #playerColor;
+    #playerName;
 
     constructor(playerType, playerNum = 1) {
         if (!(typeof playerType === "string" || playerType instanceof String)) { 
@@ -20,9 +21,15 @@ export default class Player {
         }
 
         this.#playerType = playerTypeLC;
-        this.#playerColor = playerNum === 1
-            ? "blue"
-            : "red";    
+        this.#playerColor = playerNum === 1 ? "blue" : "red";
+
+        if (playerNum === 1) {
+            this.#playerName = "Player 1";
+        } else if (playerNum === 2 && playerType === "real") {
+            this.#playerName = "Player 2";
+        } else if (playerNum === 2 && playerType === "computer") {
+            this.#playerName = "Computer";
+        }
     }
 
     get playerType() {
@@ -31,6 +38,10 @@ export default class Player {
 
     get playerColor() {
         return this.#playerColor;
+    }
+
+    get playerName() {
+        return this.#playerName;
     }
 
     get gameboard() {

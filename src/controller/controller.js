@@ -1,7 +1,12 @@
 import View from "../view/view.js";
 import Player from "../model/player.js";
+import hitAudio from "../audio/ship-hit.mp3";
+import splashAudio from "../audio/water-splash.mp3";
 
 export default class Controller {
+    #audioOn = true;
+    #hitAudio = new Audio(hitAudio);
+    #splashAudio = new Audio(splashAudio);
     #view = new View();
     #gameType = "";
     #player1 = null;
@@ -62,11 +67,28 @@ export default class Controller {
     }
 
     controllerInit() {
-        this.#view.viewInit();
+        const soundOff = document.querySelector('#sound-off');
+        const soundOn = document.querySelector('#sound-on');
+
+        soundOff.addEventListener("click", () => {
+            soundOff.style.display = "none";
+            soundOn.style.display = "block";
+            this.#audioOn = true;
+        });
+
+        soundOn.addEventListener("click", () => {
+            soundOn.style.display = "none";
+            soundOff.style.display = "block";
+            this.#audioOn = false;
+        });
+
+        // Hide the sound-off svg initially
+        soundOff.style.display = "none";
+
         this.#homePageListeners();
     }
 
-    #resetGame() {
+    #resetState() {
         this.#gameType = "";
         this.#player1 = null;
         this.#player2 = null;
@@ -74,9 +96,10 @@ export default class Controller {
         this.#currentOpponent = null;
         this.#currentPage = "home";
         this.#turn = 1;
-        // this.#homePageListeners();
 
-        const firstDialogHeader = document.querySelector('#next-player-turn > h1');
+        const main = document.querySelector('main');
+
+        const firstDialogHeader = main.querySelector('#next-player-turn > h1');
         firstDialogHeader.textContent = "";
 
         const spanPlayerNum = document.createElement('span');
@@ -85,8 +108,11 @@ export default class Controller {
         spanSecondLine.className = "text-second-line";
         firstDialogHeader.append("Player", spanPlayerNum, "'s turn in", document.createElement('br'), spanSecondLine);
 
-        const secondDialogHeader = document.querySelector('#winner > h1');
+        const secondDialogHeader = main.querySelector('#winner > h1');
         secondDialogHeader.textContent = "";
+
+        const shipDescriptors = main.querySelector('#ship-descriptors');
+        this.#view.removeFromDOM(main, shipDescriptors);
     }
 
     #homePageListeners() {
@@ -100,9 +126,13 @@ export default class Controller {
             this.#view.removeFromDOM(main, menuBtns);
             this.#currentPage = "setup";
             this.gameType = "2-player";
+
+            console.log(`typeof this.#currentPlayer = ${typeof this.#currentPlayer}, typeof this.#currentOpponent = ${typeof this.#currentOpponent}`);
+
             this.#view.boardSetupPage(this.#currentPlayer, this.#currentOpponent);
             this.#setupPageListeners();
             this.#view.shipDescriptors();
+            this.#view.shipSunkMessage();
         });
 
         // Computer mode
@@ -110,7 +140,13 @@ export default class Controller {
             this.#view.removeFromDOM(main, menuBtns);
             this.#currentPage = "setup";
             this.gameType = "computer";
+
+            console.log(`typeof this.#player1 = ${typeof this.#player1}, typeof this.#player2 = ${typeof this.#player2}`);
+
+            this.#view.boardSetupPage(this.#player1, this.#player2);
+            this.#setupPageListeners();
             this.#view.shipDescriptors();
+            this.#view.shipSunkMessage();
         });
     }
 
@@ -133,43 +169,76 @@ export default class Controller {
 
         const acceptBtn = document.querySelector('#accept-btn');
         acceptBtn.addEventListener("click", () => {
-            if (this.#turn % 2 === 1) {
-                this.#currentPlayer = this.#player2;
-                this.#currentOpponent = this.#player1;
-            } else {
-                this.#currentPlayer = this.#player1;
-                this.#currentOpponent = this.#player2;
+            // Swap players if the second player is a real player
+            if (this.#player2.playerType === "real") {
+                if (this.#turn % 2 === 1) {
+                    this.#currentPlayer = this.#player2;
+                    this.#currentOpponent = this.#player1;
+                } else {
+                    this.#currentPlayer = this.#player1;
+                    this.#currentOpponent = this.#player2;
+                }
             }
 
-            this.#turn++;
+            if (this.#player2.playerType === "real") {
+                this.#turn++;
+            }
+
+            this.#view.removeFromDOM(main, setupContainer);
 
             // Player 2 is a real player
-            if (this.#currentPlayer.playerType === "real") {
-                this.#view.removeFromDOM(main, setupContainer)
-                if (this.#turn > 2) {
-                    this.#currentPage = "game-page";
-                }
-                this.#nextPlayerModal();
+            if (this.#currentPlayer.playerType === "real" && this.#turn > 2) {
+                this.#currentPage = "game-page";
+            // Player 2 is computer
+            } else if (this.#player2.playerType === "computer") {
+                this.#currentPage = "game-page";
             }
 
-            // Player 2 is computer
+            this.#nextPlayerModal();
         });
     }
 
     #gamePageListeners() {
+        console.log(`typeof this.#player1 = ${typeof this.#player1}, typeof this.#player2 = ${typeof this.#player2}`);
+
+        console.log(`current turn = ${this.#turn}`);
+
         const opponentBoard = document.querySelector('#boards-container .gameboard:nth-child(2)');
         const cells = opponentBoard.querySelectorAll('.cell');
 
         const main = document.querySelector('main');
 
+        // Player's turn
+        if ((this.#player2.playerType === "computer" && this.#turn % 2 === 1) ||
+            (this.#player2.playerType === "real")) {
+            this.#clickOpponentGameboard(cells, main);
+        // Computer's turn
+        } else if (this.#player2.playerType === "computer" && this.#turn % 2 === 0) {
+            // Computer's turn
+            this.#computerAttacksRandom();
+            this.#turn++;
+
+            this.#nextPlayerModal();
+        }
+    }
+
+    #clickOpponentGameboard(cells, main) {
         cells.forEach(cell => {
-            cell.style.cursor = 'pointer';
+            let pos = cell.id.split('-')[1];
+            let posConverted = this.#map.get(pos);
+            let [row, col] = posConverted.split('');
+
+            if (
+                !this.#currentOpponent.gameboard.successfulAttacks.has(`(${row}, ${col})`) &&
+                !this.#currentOpponent.gameboard.missedAttacks.has(`(${row}, ${col})`)
+            ) {
+                cell.style.cursor = 'pointer';
+            }
 
             cell.addEventListener('click', async () => {
-                const pos = cell.id.split('-')[1];
-                const posConverted = this.#map.get(pos);
-                const [row, col] = posConverted.split('');
-                // console.log(`row = ${row}, col = ${col}`);
+                pos = cell.id.split('-')[1];
+                posConverted = this.#map.get(pos);
+                [row, col] = posConverted.split('');
 
                 // Do not execute if the cell has already been attacked
                 if (
@@ -180,12 +249,33 @@ export default class Controller {
                 }
 
                 this.#currentOpponent.gameboard.receiveAttack(row, col);
+                if (this.#audioOn && this.#currentOpponent.gameboard.recentHit === "hit") {
+                    this.#hitAudio.play();
+                } else if (this.#audioOn && this.#currentOpponent.gameboard.recentHit === "miss") {
+                    this.#splashAudio.play();
+                }
 
-                // console.log(`current turn = ${this.#turn}`);
+                let sunkShip = false;
+                let shipSunkMessage = document.querySelector('#ship-sunk-message');
+                const main = document.querySelector('main');
+                if (this.#currentOpponent.gameboard.sunkAShip) {
+                    shipSunkMessage.textContent = 
+                        `${this.#currentOpponent.playerName}'s ${this.#currentOpponent.gameboard.mostRecentShipSunk} has been sunk!`;
+                    shipSunkMessage.style.visibility = 'visible';
+                    sunkShip = true;
+                }
 
-                this.#view.gameViewPage(this.#currentPlayer, this.#currentOpponent);
+                if (this.#player2.playerType === "real") {
+                    this.#view.gameViewPage(this.#currentPlayer, this.#currentOpponent);
+                }
+                else if (this.#player2.playerType === "computer") {
+                    this.#view.gameViewPage(this.#player1, this.#player2);
+                }
 
-                await this.#delay(1000);
+                await this.#delay(2000);
+                if (sunkShip) {
+                    shipSunkMessage.style.visibility = 'hidden';
+                } 
 
                 // Remove current gameboards from the DOM
                 const boardsContainer = main.querySelector('#boards-container');
@@ -195,10 +285,8 @@ export default class Controller {
                 if (this.#currentOpponent.gameboard.allShipsSunk) {
                     console.log('All of the opponents ships have been sunk!');
                     if (this.#turn % 2 === 1) {
-                        // console.log('Player 1 wins!');
                         this.#playerWinsModal("Player 1");
                     } else {
-                        // console.log('Player 2 wins!');
                         if (this.#currentOpponent.playerType === "real") {
                             this.#playerWinsModal("Player 2");
                         } else if (this.#currentOpponent.playerType === "computer") {
@@ -206,23 +294,51 @@ export default class Controller {
                         }
                     }
 
-                    // this.#playerWinsModal();
                     return;
                 }
 
-                if (this.#turn % 2 === 1) {
-                    this.#currentPlayer = this.#player2;
-                    this.#currentOpponent = this.#player1;
-                } else {
-                    this.#currentPlayer = this.#player1;
-                    this.#currentOpponent = this.#player2;
+                // Swap currentPlayer if both players are real
+                if (this.#player2.playerType === "real") {
+                    if (this.#turn % 2 === 1) {
+                        this.#currentPlayer = this.#player2;
+                        this.#currentOpponent = this.#player1;
+                    } else {
+                        this.#currentPlayer = this.#player1;
+                        this.#currentOpponent = this.#player2;
+                    }
                 }
-
+                
                 this.#turn++;
 
                 this.#nextPlayerModal();
+
+                console.log("Player 1 gameboard:")
+                this.#player1.gameboard.prettyPrint();
+
+                console.log("Player 2 gameboard:");
+                this.#player2.gameboard.prettyPrint();
             });
-        })
+        });
+    }
+
+    #computerAttacksRandom() {
+        let randRow = Math.floor(Math.random() * 10);
+        let randCol = Math.floor(Math.random() * 10);
+
+        while (
+            this.#player1.gameboard.successfulAttacks.has(`(${randRow}, ${randCol})`) ||
+            this.#player1.gameboard.missedAttacks.has(`(${randRow}, ${randCol})`)
+        ) {
+            randRow = Math.floor(Math.random() * 10);
+            randCol = Math.floor(Math.random() * 10);
+        }
+
+        this.#player1.gameboard.receiveAttack(randRow, randCol);
+        if (this.#audioOn && this.#player1.gameboard.recentHit === "hit") {
+            this.#hitAudio.play();
+        } else if (this.#audioOn && this.#player1.gameboard.recentHit === "miss") {
+            this.#splashAudio.play();
+        }
     }
 
     async #playerWinsModal(playerWinner) {
@@ -237,22 +353,38 @@ export default class Controller {
 
         this.#view.homePage();
         this.#homePageListeners();
-        this.#resetGame();
+        this.#resetState();
     }
 
     async #nextPlayerModal() {
-        await this.#transitionModal('next-player-turn');
+        console.log("Called nextPlayerModal");
 
+        if (this.#player2.playerType === "real") {
+            await this.#transitionModal('next-player-turn');
+        }
+
+        // We are still in the setup page
         if (this.#currentPage === "setup") {
+            console.log('1');
             this.#view.boardSetupPage(this.#currentPlayer);
             this.#setupPageListeners();
-        } else if (this.#currentPage === "game-page") {
+        // We are now in the game page and both players are real
+        } else if (this.#currentPage === "game-page" && this.#player2.playerType === "real") {
+            console.log('2');
             this.#view.gameViewPage(this.#currentPlayer, this.#currentOpponent);
+            this.#gamePageListeners();
+        // We are now in the game page but we are playing against the computer
+        } else if (this.#currentPage === "game-page" && this.#player2.playerType === "computer") {
+            console.log('3');
+            console.log("Playing against the computer woohoo!");
+            this.#view.gameViewPage(this.#player1, this.#player2);
             this.#gamePageListeners();
         }
     }
 
     async #transitionModal(dialogId) {
+        console.log("Called transitionModal");
+
         const currPlayerNum = document.querySelector('#curr-player-num');
         currPlayerNum.textContent = this.#turn % 2 === 1 ? " 1" : " 2";
 
@@ -265,11 +397,11 @@ export default class Controller {
 
         if (dialogId === 'next-player-turn') {
             secondLine.textContent = '3';
-            await this.#delay(100);
+            await this.#delay(1000);
             secondLine.textContent = '2';
-            await this.#delay(100);
+            await this.#delay(1000);
             secondLine.textContent = '1';
-            await this.#delay(100);
+            await this.#delay(1000);
         } else if (dialogId === 'winner') {
             await this.#delay(3000);
         }

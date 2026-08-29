@@ -4,27 +4,6 @@ export default class View {
         [5, 'F'], [6, 'G'], [7, 'H'], [8, 'I'], [9, 'J']
     ]);
 
-    viewInit() {
-        const soundOff = document.querySelector('#sound-off');
-        const soundOn = document.querySelector('#sound-on');
-
-        soundOff.addEventListener("click", () => {
-            soundOff.style.display = "none";
-            soundOn.style.display = "block";
-        });
-
-        soundOn.addEventListener("click", () => {
-            soundOn.style.display = "none";
-            soundOff.style.display = "block";
-        });
-
-        // Hide the sound-off svg initially
-        soundOff.style.display = "none";
-
-        const twoPlayerBtn = document.querySelector('#menu-btns button:nth-child(1)');
-        const computerBtn = document.querySelector('#menu-btns button:nth-child(2)');
-    }
-
     removeFromDOM(parent, ...children) { 
         if (parent) { 
             children.forEach(child => { 
@@ -71,6 +50,16 @@ export default class View {
         main.appendChild(shipDescriptors);
     }
 
+    shipSunkMessage() {
+        const main = document.querySelector('main');
+        const shipSunkMessage = document.createElement('h1');
+        shipSunkMessage.id = "ship-sunk-message";
+        shipSunkMessage.textContent = "Invisible text";
+        shipSunkMessage.style.fontWeight = 500;
+        shipSunkMessage.style.visibility = 'hidden';
+        main.appendChild(shipSunkMessage);
+    }
+
     homePage() {
         const main = document.querySelector('main');
         main.style.backgroundColor = "white";
@@ -90,6 +79,8 @@ export default class View {
     }
 
     boardSetupPage(player) {
+        console.log("In boardSetupPage");
+
         const main = document.querySelector('main');
         main.style.backgroundColor = player.playerColor === "blue"
             ? "var(--blue-background, blue)"
@@ -126,6 +117,8 @@ export default class View {
     }
 
     gameViewPage(player, opponent) {
+        console.log("In gameViewPage");
+
         const main = document.querySelector('main');
         main.style.backgroundColor = player.playerColor === "blue"
             ? "var(--blue-background, blue)"
@@ -148,6 +141,8 @@ export default class View {
     }
 
     displayBoard(boardsContainer, player, playerType) {
+        console.log("In displayBoard");
+
         if (!(typeof playerType === "string" || playerType instanceof String)) { 
             throw new TypeError("playerType needs to be a string!");
         }
@@ -171,8 +166,9 @@ export default class View {
         const playerBoardHeader = document.createElement('h1');
         playerBoardHeader.className = "player-header";
 
-        const playerNum = player.playerColor === "blue" ? 1 : 2;
-        playerBoardHeader.textContent = `Player ${playerNum} Ships`;
+        // const playerNum = player.playerColor === "blue" ? 1 : 2;
+        console.log(`player.playerName = ${player.playerName}`);
+        playerBoardHeader.textContent = `${player.playerName} Ships`;
         playerBoardDiv.appendChild(playerBoardHeader);
         
         // Player's column numbers
