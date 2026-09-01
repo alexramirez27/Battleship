@@ -259,3 +259,7 @@ footer p {
 footer svg {
   color: white;
 }
+
+#ship-sunk-message {
+  font-weight: 500;
+}

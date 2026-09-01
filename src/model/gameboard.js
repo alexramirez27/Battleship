@@ -13,9 +13,9 @@ export default class Gameboard {
     #battleship;
     #carrier;
 
-    #recentHit;
+    #recentHit = "";
     #sunkAShip = false;
-    #mostRecentShipSunk;
+    #mostRecentShipSunk = "";
 
     constructor() {
         this.resetBoard();
@@ -296,6 +296,10 @@ export default class Gameboard {
         this.#cruiser = new Ship(3);
         this.#battleship = new Ship(4);
         this.#carrier = new Ship(5);
+
+        this.#recentHit = "";
+        this.#sunkAShip = false;
+        this.#mostRecentShipSunk = "";
 
         for (let row = 0; row < 10; row++) {
             let currRow = [];

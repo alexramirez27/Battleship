@@ -15,6 +15,16 @@ export default class Controller {
     #currentOpponent = null;
     #currentPage = "home";
     #turn = 1;
+
+    #computerState = "random";
+    #mostRecentHit = "";
+    #targetStart = "";
+    #currNumHits = 0;
+    #directions = new Set([
+        "up", "down", "left", "right"
+    ]);
+    #chosenDirection = "";
+
     #map = new Map([
         ['A1', '00'], ['A2', '01'], ['A3', '02'], ['A4', '03'], ['A5', '04'],
         ['A6', '05'], ['A7', '06'], ['A8', '07'], ['A9', '08'], ['A10', '09'],
@@ -97,6 +107,14 @@ export default class Controller {
         this.#currentPage = "home";
         this.#turn = 1;
 
+        this.#computerState = "random";
+        this.#mostRecentHit = "";
+        this.#targetStart = "";
+        this.#directions = new Set([
+            "up", "down", "left", "right"
+        ]);
+        this.#chosenDirection = "";
+
         const main = document.querySelector('main');
 
         const firstDialogHeader = main.querySelector('#next-player-turn > h1');
@@ -112,7 +130,13 @@ export default class Controller {
         secondDialogHeader.textContent = "";
 
         const shipDescriptors = main.querySelector('#ship-descriptors');
-        this.#view.removeFromDOM(main, shipDescriptors);
+        const shipSunkMessage = main.querySelector('#ship-sunk-message');
+        this.#view.removeFromDOM(main, shipDescriptors, shipSunkMessage);
+
+        const boardsContainer = document.querySelector('#boards-container');
+        if (boardsContainer) {
+            this.#view.removeFromDOM(main, boardsContainer);
+        }
     }
 
     #homePageListeners() {
@@ -127,8 +151,6 @@ export default class Controller {
             this.#currentPage = "setup";
             this.gameType = "2-player";
 
-            console.log(`typeof this.#currentPlayer = ${typeof this.#currentPlayer}, typeof this.#currentOpponent = ${typeof this.#currentOpponent}`);
-
             this.#view.boardSetupPage(this.#currentPlayer, this.#currentOpponent);
             this.#setupPageListeners();
             this.#view.shipDescriptors();
@@ -140,8 +162,6 @@ export default class Controller {
             this.#view.removeFromDOM(main, menuBtns);
             this.#currentPage = "setup";
             this.gameType = "computer";
-
-            console.log(`typeof this.#player1 = ${typeof this.#player1}, typeof this.#player2 = ${typeof this.#player2}`);
 
             this.#view.boardSetupPage(this.#player1, this.#player2);
             this.#setupPageListeners();
@@ -198,11 +218,7 @@ export default class Controller {
         });
     }
 
-    #gamePageListeners() {
-        console.log(`typeof this.#player1 = ${typeof this.#player1}, typeof this.#player2 = ${typeof this.#player2}`);
-
-        console.log(`current turn = ${this.#turn}`);
-
+    async #gamePageListeners() {
         const opponentBoard = document.querySelector('#boards-container .gameboard:nth-child(2)');
         const cells = opponentBoard.querySelectorAll('.cell');
 
@@ -215,10 +231,41 @@ export default class Controller {
         // Computer's turn
         } else if (this.#player2.playerType === "computer" && this.#turn % 2 === 0) {
             // Computer's turn
-            this.#computerAttacksRandom();
-            this.#turn++;
+            const gameOver = await this.#computerAttacks();
 
-            this.#nextPlayerModal();
+            this.#view.gameViewPage(this.#player1, this.#player2);
+
+            if (this.#player1.gameboard.sunkAShip) {
+                const main = document.querySelector('main');
+                let shipSunkMessage;
+
+                if (document.querySelector('#ship-sunk-message') === null) {
+                    shipSunkMessage = document.createElement('h1');
+                    shipSunkMessage.id = 'ship-sunk-message';
+                    main.appendChild(shipSunkMessage);
+                } else {
+                    shipSunkMessage = document.querySelector('#ship-sunk-message');
+                }
+
+                shipSunkMessage.textContent =
+                    `${this.#player1.playerName}'s ${this.#player1.gameboard.mostRecentShipSunk} has been sunk!`;
+
+                shipSunkMessage.style.visibility = 'visible';
+
+                await this.#delay(3000);
+
+                shipSunkMessage.style.visibility = 'hidden';
+            } else {
+                await this.#delay(1900);
+            }
+
+            if (gameOver) {
+                this.#playerWinsModal("Computer");
+                return;
+            }
+
+            this.#turn++;
+            await this.#nextPlayerModal();
         }
     }
 
@@ -248,7 +295,9 @@ export default class Controller {
                     return;
                 }
 
+                // Attack the cell
                 this.#currentOpponent.gameboard.receiveAttack(row, col);
+
                 if (this.#audioOn && this.#currentOpponent.gameboard.recentHit === "hit") {
                     this.#hitAudio.play();
                 } else if (this.#audioOn && this.#currentOpponent.gameboard.recentHit === "miss") {
@@ -256,8 +305,16 @@ export default class Controller {
                 }
 
                 let sunkShip = false;
-                let shipSunkMessage = document.querySelector('#ship-sunk-message');
                 const main = document.querySelector('main');
+                let shipSunkMessage;
+                if (document.querySelector('#ship-sunk-message') === null) {
+                    shipSunkMessage = document.createElement('h1');
+                    shipSunkMessage.id = 'ship-sunk-message';
+                    main.appendChild(shipSunkMessage);
+                } else {
+                    shipSunkMessage = document.querySelector('#ship-sunk-message');
+                }
+
                 if (this.#currentOpponent.gameboard.sunkAShip) {
                     shipSunkMessage.textContent = 
                         `${this.#currentOpponent.playerName}'s ${this.#currentOpponent.gameboard.mostRecentShipSunk} has been sunk!`;
@@ -272,10 +329,13 @@ export default class Controller {
                     this.#view.gameViewPage(this.#player1, this.#player2);
                 }
 
-                await this.#delay(2000);
                 if (sunkShip) {
+                    await this.#delay(3000);
                     shipSunkMessage.style.visibility = 'hidden';
                 } 
+                else {
+                    await this.#delay(1900);
+                }
 
                 // Remove current gameboards from the DOM
                 const boardsContainer = main.querySelector('#boards-container');
@@ -283,15 +343,10 @@ export default class Controller {
 
                 // Check if all ships sunk
                 if (this.#currentOpponent.gameboard.allShipsSunk) {
-                    console.log('All of the opponents ships have been sunk!');
                     if (this.#turn % 2 === 1) {
                         this.#playerWinsModal("Player 1");
-                    } else {
-                        if (this.#currentOpponent.playerType === "real") {
-                            this.#playerWinsModal("Player 2");
-                        } else if (this.#currentOpponent.playerType === "computer") {
-                            this.#playerWinsModal("Computer");
-                        }
+                    } else if (this.#currentOpponent.playerType === "real") {
+                        this.#playerWinsModal("Player 2");
                     }
 
                     return;
@@ -311,34 +366,166 @@ export default class Controller {
                 this.#turn++;
 
                 this.#nextPlayerModal();
-
-                console.log("Player 1 gameboard:")
-                this.#player1.gameboard.prettyPrint();
-
-                console.log("Player 2 gameboard:");
-                this.#player2.gameboard.prettyPrint();
             });
         });
     }
 
-    #computerAttacksRandom() {
-        let randRow = Math.floor(Math.random() * 10);
-        let randCol = Math.floor(Math.random() * 10);
+    async #computerAttacks() {
+        if (this.#computerState === "random") {
+            let randRow = Math.floor(Math.random() * 10);
+            let randCol = Math.floor(Math.random() * 10);
 
-        while (
-            this.#player1.gameboard.successfulAttacks.has(`(${randRow}, ${randCol})`) ||
-            this.#player1.gameboard.missedAttacks.has(`(${randRow}, ${randCol})`)
-        ) {
-            randRow = Math.floor(Math.random() * 10);
-            randCol = Math.floor(Math.random() * 10);
+            while (
+                this.#player1.gameboard.successfulAttacks.has(`(${randRow}, ${randCol})`) ||
+                this.#player1.gameboard.missedAttacks.has(`(${randRow}, ${randCol})`)
+            ) {
+                randRow = Math.floor(Math.random() * 10);
+                randCol = Math.floor(Math.random() * 10);
+            }
+
+            this.#player1.gameboard.receiveAttack(randRow, randCol);
+            if (this.#player1.gameboard.recentHit === "hit") {
+                if (this.#audioOn) {
+                    this.#hitAudio.play();
+                }
+
+                this.#computerState = "hunt";
+                this.#currNumHits++;
+                this.#mostRecentHit = `${randRow}, ${randCol}`;
+                this.#targetStart = `${randRow}, ${randCol}`;
+            } else if (this.#audioOn && this.#player1.gameboard.recentHit === "miss") {
+                this.#splashAudio.play();
+            }
+        } else if (this.#computerState === "hunt") {
+            const [row, col] = this.#mostRecentHit.split(', ').map(Number);
+
+            if (this.#chosenDirection === "") {
+                // Check if we are on the boundary 
+                // Or if an adjacent cell has already been hit
+                if (row - 1 < 0 ||
+                    this.#player1.gameboard.successfulAttacks.has(`(${row - 1}, ${col})`) ||
+                    this.#player1.gameboard.missedAttacks.has(`(${row - 1}, ${col})`) 
+                ) {
+                    this.#directions.delete("up");
+                }
+
+                if (row + 1 > 9 ||
+                    this.#player1.gameboard.successfulAttacks.has(`(${row + 1}, ${col})`) ||
+                    this.#player1.gameboard.missedAttacks.has(`(${row + 1}, ${col})`)
+                ) {
+                    this.#directions.delete("down");
+                }
+
+                if (col - 1 < 0 ||
+                    this.#player1.gameboard.successfulAttacks.has(`(${row}, ${col - 1})`) ||
+                    this.#player1.gameboard.missedAttacks.has(`(${row}, ${col - 1})`)
+                ) {
+                    this.#directions.delete("left");
+                }
+
+                if (col + 1 > 9 ||
+                    this.#player1.gameboard.successfulAttacks.has(`(${row}, ${col + 1})`) ||
+                    this.#player1.gameboard.missedAttacks.has(`(${row}, ${col + 1})`)
+                ) {
+                    this.#directions.delete("right");
+                }
+
+                // Pick one of the directions available
+                const directionsArray = [...this.#directions];
+
+                if (directionsArray.length === 0) {
+                    throw new Error("Computer hunt state has no available directions.");
+                }
+
+                this.#chosenDirection =
+                    directionsArray[Math.floor(Math.random() * directionsArray.length)];
+            }
+
+            let chosenRow, chosenCol;
+            switch (this.#chosenDirection) {
+                case "up":
+                    chosenRow = row - 1;
+                    chosenCol = col;
+                    break;
+                case "down":
+                    chosenRow = row + 1;
+                    chosenCol = col;
+                    break;
+                case "left":
+                    chosenRow = row;
+                    chosenCol = col - 1;
+                    break;
+                case "right":
+                    chosenRow = row;
+                    chosenCol = col + 1;
+                    break;
+            }
+
+            if (
+                chosenRow < 0 || chosenRow > 9 ||
+                chosenCol < 0 || chosenCol > 9
+            ) {
+                this.#directions.delete(this.#chosenDirection);
+                this.#chosenDirection = "";
+                this.#mostRecentHit = this.#targetStart;
+
+                return false;
+            }
+
+            // Attack player 1's cell
+            this.#player1.gameboard.receiveAttack(chosenRow, chosenCol);
+            if (this.#player1.gameboard.recentHit === "hit") {
+                if (this.#audioOn) {
+                    this.#hitAudio.play();
+                }
+
+                this.#currNumHits++;
+                this.#mostRecentHit = `${chosenRow}, ${chosenCol}`
+
+                // Check if the computer sunk one of Player 1's ships
+                if (this.#player1.gameboard.sunkAShip) {
+                    // Reset computer mode back to random
+                    this.#computerState = "random";
+                    this.#mostRecentHit = "";
+                    this.#targetStart = "";
+                    this.#directions = new Set([
+                        "up", "down", "left", "right"
+                    ]);
+                    this.#chosenDirection = "";
+                }
+            } else if (this.#player1.gameboard.recentHit === "miss") {
+                if (this.#audioOn) {
+                    this.#splashAudio.play();
+                }
+
+                let newDirection;
+                switch (this.#chosenDirection) {
+                    case "up":
+                        newDirection = "down";
+                        break;
+                    case "down":
+                        newDirection = "up";
+                        break;
+                    case "left":
+                        newDirection = "right";
+                        break;
+                    case "right":
+                        newDirection = "left";
+                        break;
+                }
+
+                this.#mostRecentHit = this.#targetStart;
+                this.#directions.delete(this.#chosenDirection);
+                this.#chosenDirection = "";
+            }
         }
 
-        this.#player1.gameboard.receiveAttack(randRow, randCol);
-        if (this.#audioOn && this.#player1.gameboard.recentHit === "hit") {
-            this.#hitAudio.play();
-        } else if (this.#audioOn && this.#player1.gameboard.recentHit === "miss") {
-            this.#splashAudio.play();
+        // Check if all ships sunk
+        if (this.#player1.gameboard.allShipsSunk) {
+            return true;
         }
+
+        return false;
     }
 
     async #playerWinsModal(playerWinner) {
@@ -357,34 +544,26 @@ export default class Controller {
     }
 
     async #nextPlayerModal() {
-        console.log("Called nextPlayerModal");
-
         if (this.#player2.playerType === "real") {
             await this.#transitionModal('next-player-turn');
         }
 
         // We are still in the setup page
         if (this.#currentPage === "setup") {
-            console.log('1');
             this.#view.boardSetupPage(this.#currentPlayer);
             this.#setupPageListeners();
         // We are now in the game page and both players are real
         } else if (this.#currentPage === "game-page" && this.#player2.playerType === "real") {
-            console.log('2');
             this.#view.gameViewPage(this.#currentPlayer, this.#currentOpponent);
             this.#gamePageListeners();
         // We are now in the game page but we are playing against the computer
         } else if (this.#currentPage === "game-page" && this.#player2.playerType === "computer") {
-            console.log('3');
-            console.log("Playing against the computer woohoo!");
             this.#view.gameViewPage(this.#player1, this.#player2);
             this.#gamePageListeners();
         }
     }
 
     async #transitionModal(dialogId) {
-        console.log("Called transitionModal");
-
         const currPlayerNum = document.querySelector('#curr-player-num');
         currPlayerNum.textContent = this.#turn % 2 === 1 ? " 1" : " 2";
 

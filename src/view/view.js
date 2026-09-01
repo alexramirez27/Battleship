@@ -79,8 +79,6 @@ export default class View {
     }
 
     boardSetupPage(player) {
-        console.log("In boardSetupPage");
-
         const main = document.querySelector('main');
         main.style.backgroundColor = player.playerColor === "blue"
             ? "var(--blue-background, blue)"
@@ -117,8 +115,6 @@ export default class View {
     }
 
     gameViewPage(player, opponent) {
-        console.log("In gameViewPage");
-
         const main = document.querySelector('main');
         main.style.backgroundColor = player.playerColor === "blue"
             ? "var(--blue-background, blue)"
@@ -141,8 +137,6 @@ export default class View {
     }
 
     displayBoard(boardsContainer, player, playerType) {
-        console.log("In displayBoard");
-
         if (!(typeof playerType === "string" || playerType instanceof String)) { 
             throw new TypeError("playerType needs to be a string!");
         }
@@ -154,11 +148,6 @@ export default class View {
         
         // Player's gameboard
         const playerBoard = player.gameboard.board;
-        // player.gameboard.prettyPrint();
-        // player.gameboard.printMap();
-
-        // console.log('======================================');
-
         const playerBoardDiv = document.createElement('div');
         playerBoardDiv.className = "gameboard";
 
@@ -166,8 +155,6 @@ export default class View {
         const playerBoardHeader = document.createElement('h1');
         playerBoardHeader.className = "player-header";
 
-        // const playerNum = player.playerColor === "blue" ? 1 : 2;
-        console.log(`player.playerName = ${player.playerName}`);
         playerBoardHeader.textContent = `${player.playerName} Ships`;
         playerBoardDiv.appendChild(playerBoardHeader);
         
